@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 반 질문 벽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root {
+  --cork: #C9A276; --cork-dark: #A67F55; --frame: #6B4A2B;
+  --ink: #2B2420; --soft: #6E625A;
+  --y: #FFE98A; --p: #FFC4D0; --g: #C8EDB3; --b: #BFE3F5; --o: #FFD3A8; --v: #DCCBF7;
+  --open: #E76F51; --done: #2A9D8F;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: "Gowun Dodum", "Jua", sans-serif; color: var(--ink);
+  background: #3D2B1F;
+  display: flex; flex-direction: column;
+}
+/* ---------- 상단 바 ---------- */
+header {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 12px 22px; background: #2B1E15; color: #FFF6E6;
+}
+header h1 { font-family: "Jua"; font-size: 25px; margin: 0; font-weight: 400; letter-spacing: 1px; cursor: pointer; flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header h1:hover { text-decoration: underline dotted rgba(255,255,255,.4); }
+.stat { font-family: "Jua"; font-size: 16px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,.1); }
+.stat b { font-size: 19px; }
+.spacer { flex: 1; }
+.btn {
+  font-family: "Jua"; font-size: 17px; border: none; cursor: pointer; border-radius: 12px;
+  padding: 9px 16px; background: #FFF6E6; color: #3D2B1F; display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 3px 0 rgba(0,0,0,.25); transition: transform .1s;
+}
+.btn:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+.btn.primary { background: #FFD23F; }
+.btn.ghost { background: transparent; color: #FFF6E6; box-shadow: none; border: 2px solid rgba(255,246,230,.35); }
+.btn.on { background: #E76F51; color: #fff; border-color: #E76F51; }
+select.btn { appearance: none; padding-right: 16px; }
+
+/* ---------- 코르크 보드 ---------- */
+main {
+  flex: 1; display: grid; grid-template-columns: 1.35fr 1fr; gap: 0; min-height: 0;
+  border: 14px solid var(--frame); border-top-width: 10px;
+  background-color: var(--cork);
+  background-image:
+    radial-gradient(rgba(90,55,25,.35) 1px, transparent 1.5px),
+    radial-gradient(rgba(255,240,210,.35) 1px, transparent 1.5px),
+    radial-gradient(rgba(120,80,40,.25) 2px, transparent 2.5px);
+  background-size: 9px 9px, 13px 13px, 29px 29px;
+  background-position: 0 0, 4px 6px, 10px 3px;
+  box-shadow: inset 0 0 40px rgba(60,35,15,.45);
+}
+.zone { position: relative; overflow-y: auto; padding: 18px 20px 40px; min-height: 0; }
+.zone + .zone { border-left: 6px dashed rgba(70,45,20,.35); }
+.zone-head { position: sticky; top: -18px; z-index: 5; display: flex; justify-content: center; padding: 6px 0 14px; }
+.banner {
+  font-family: "Jua"; font-size: 25px; color: #fff; padding: 8px 26px 8px 22px; border-radius: 6px;
+  box-shadow: 0 4px 8px rgba(0,0,0,.25); display: flex; align-items: center; gap: 10px; position: relative;
+}
+.banner .count { background: rgba(255,255,255,.25); border-radius: 14px; padding: 0 10px; font-size: 20px; }
+.zone.open .banner { background: var(--open); transform: rotate(-1deg); }
+.zone.done .banner { background: var(--done); transform: rotate(1deg); }
+.banner::before { content: ""; position: absolute; top: -8px; left: 50%; width: 70px; height: 18px; margin-left: -35px; background: rgba(255,255,255,.55); transform: rotate(-3deg); }
+
+.notes { display: flex; flex-wrap: wrap; gap: 26px 22px; justify-content: center; align-content: flex-start; }
+.empty { font-family: "Jua"; color: rgba(60,35,15,.55); font-size: 22px; text-align: center; margin-top: 50px; line-height: 1.6; }
+
+/* ---------- 포스트잇 ---------- */
+.note {
+  position: relative; width: 210px; min-height: 200px; padding: 26px 16px var(--pb, 46px);
+  background: var(--y); color: var(--ink); cursor: pointer;
+  box-shadow: 0 10px 14px -6px rgba(40,20,5,.55), 0 2px 3px rgba(40,20,5,.2);
+  transform: rotate(var(--rot, 0deg)); transition: transform .2s, box-shadow .2s;
+  border-bottom-right-radius: 34px 8px;
+  animation: pop .35s ease-out;
+}
+.note:hover { transform: rotate(0) scale(1.04); z-index: 3; box-shadow: 0 16px 22px -6px rgba(40,20,5,.55); }
+.note::before { /* 핀 */
+  content: ""; position: absolute; top: 8px; left: 50%; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0 18%, var(--pin, #E63946) 20% 100%);
+  box-shadow: 1px 3px 3px rgba(0,0,0,.35);
+}
+.note .q { font-family: "Jua"; font-size: 21px; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
+.note .who { position: absolute; left: 14px; bottom: 12px; font-size: 14px; color: var(--soft); }
+.note.c-y { background: var(--y); } .note.c-p { background: var(--p); } .note.c-g { background: var(--g); }
+.note.c-b { background: var(--b); } .note.c-o { background: var(--o); } .note.c-v { background: var(--v); }
+
+/* 원형 스티커 */
+.dots { position: absolute; inset: 0; pointer-events: none; }
+.dot {
+  position: absolute; width: 22px; height: 22px; border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,.35), inset 0 -2px 0 rgba(0,0,0,.12), inset 0 2px 0 rgba(255,255,255,.4);
+  animation: stick .3s cubic-bezier(.3,1.6,.6,1);
+}
+.metoo {
+  position: absolute; right: 10px; bottom: 9px; font-family: "Jua"; font-size: 15px;
+  border: 2px solid rgba(0,0,0,.18); background: rgba(255,255,255,.6); border-radius: 18px; padding: 3px 10px 3px 6px;
+  display: flex; align-items: center; gap: 5px; cursor: pointer; color: var(--ink);
+}
+.metoo .d { width: 16px; height: 16px; border-radius: 50%; background: #E63946; display: inline-block; }
+.metoo:hover { background: #fff; }
+
+/* 해결된 질문의 답 */
+.answer {
+  margin: 14px -6px 0; padding: 10px 10px 8px; background: rgba(255,255,255,.75); border-radius: 6px;
+  font-size: 16px; line-height: 1.5; border: 2px dashed rgba(42,157,143,.6); position: relative;
+}
+.answer .tag { font-family: "Jua"; font-size: 13px; color: #fff; background: var(--done); border-radius: 10px; padding: 1px 8px; margin-right: 4px; }
+.answer .by { display: block; font-size: 13px; color: var(--soft); margin-top: 4px; }
+.solved-stamp {
+  position: absolute; top: -16px; right: -4px; font-family: "Jua"; font-size: 15px; color: var(--done);
+  border: 3px solid var(--done); border-radius: 8px; padding: 0 6px; transform: rotate(12deg); background: rgba(255,255,255,.7);
+}
+
+/* ---------- 모달 ---------- */
+.backdrop { position: fixed; inset: 0; background: rgba(30,18,8,.55); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+.backdrop.show { display: flex; }
+.sheet {
+  width: min(560px, 100%); max-height: 92vh; overflow-y: auto; background: var(--y); padding: 30px 28px 24px; position: relative;
+  box-shadow: 0 25px 40px rgba(0,0,0,.45); border-bottom-right-radius: 50px 12px; animation: pop .25s ease-out;
+}
+.sheet h2 { font-family: "Jua"; font-weight: 400; font-size: 27px; margin: 0 0 14px; }
+.sheet label { font-family: "Jua"; font-size: 18px; display: block; margin: 14px 0 6px; }
+.sheet textarea, .sheet input[type=text], .sheet select {
+  width: 100%; font-family: "Jua"; font-size: 21px; padding: 10px 12px; border: 2px solid rgba(0,0,0,.2); border-radius: 10px;
+  background: rgba(255,255,255,.8); color: var(--ink); resize: vertical;
+}
+.sheet textarea:focus, .sheet input:focus { outline: 3px solid rgba(231,111,81,.5); }
+.starters { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.starters button { font-family: "Jua"; font-size: 15px; border: none; border-radius: 14px; padding: 4px 11px; background: rgba(255,255,255,.7); cursor: pointer; }
+.colors { display: flex; gap: 10px; }
+.colors button { width: 40px; height: 40px; border-radius: 8px; border: 3px solid transparent; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+.colors button.sel { border-color: var(--ink); transform: scale(1.1); }
+.row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+.sheet .btn { background: #fff; }
+.sheet .btn.primary { background: var(--open); color: #fff; }
+.sheet .btn.teal { background: var(--done); color: #fff; }
+.sheet .btn.danger { background: transparent; color: #B4462A; box-shadow: none; border: 2px solid #B4462A; margin-right: auto; }
+.bigq { font-family: "Jua"; font-size: 28px; line-height: 1.4; margin: 0 0 8px; word-break: keep-all; }
+.meta { font-size: 15px; color: var(--soft); }
+.x { position: absolute; top: 10px; right: 14px; font-family: "Jua"; font-size: 28px; background: none; border: none; cursor: pointer; color: var(--soft); }
+.hint { font-size: 15px; color: var(--soft); margin-top: 6px; }
+
+/* 토스트 */
+#toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(120px); background: #2B1E15; color: #FFF6E6; font-family: "Jua"; font-size: 19px; padding: 12px 22px; border-radius: 30px; transition: transform .3s; z-index: 60; box-shadow: 0 6px 16px rgba(0,0,0,.35); }
+#toast.show { transform: translateX(-50%) translateY(0); }
+.sync { font-size: 13px; opacity: .75; }
+
+@keyframes pop { from { transform: scale(.7) rotate(var(--rot, 0deg)); opacity: 0; } to { transform: scale(1) rotate(var(--rot, 0deg)); opacity: 1; } }
+@keyframes stick { from { transform: scale(2.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fly { 0% { transform: scale(1) rotate(var(--rot)); } 40% { transform: scale(1.15) rotate(8deg); } 100% { transform: scale(.4) translateX(300px); opacity: 0; } }
+.note.flying { animation: fly .55s ease-in forwards; pointer-events: none; }
+
+@media (max-width: 820px) {
+  main { grid-template-columns: 1fr; }
+  .zone + .zone { border-left: none; border-top: 6px dashed rgba(70,45,20,.35); }
+  .note { width: 170px; min-height: 160px; }
+  .note .q { font-size: 18px; }
+  header h1 { font-size: 23px; }
+}
+
+[hidden] { display: none !important; }
+.sheet.wide { width: min(760px, 100%); background: #FFF6E0; }
+.two-col { display: grid; grid-template-columns: 1fr 2fr; gap: 14px; }
+.opt { font-family: "Gowun Dodum"; font-size: 14px; color: var(--soft); }
+.drop { border: 3px dashed rgba(0,0,0,.25); border-radius: 14px; padding: 18px; text-align: center; background: rgba(255,255,255,.6); transition: background .2s, border-color .2s; }
+.drop.over { background: #FFE98A; border-color: var(--open); }
+.drop-big { font-family: "Jua"; font-size: 20px; margin-bottom: 6px; }
+.linkbtn { font-family: "Jua"; font-size: 20px; border: none; background: none; color: var(--open); text-decoration: underline; cursor: pointer; padding: 0; }
+details { margin-top: 10px; }
+details summary { font-family: "Jua"; font-size: 16px; cursor: pointer; color: var(--soft); }
+details textarea { margin-top: 8px; font-size: 16px !important; font-family: "Gowun Dodum" !important; }
+#sLessons { font-size: 18px; line-height: 1.6; }
+.tplbox { display: flex; align-items: center; gap: 12px; justify-content: space-between; background: #E3F4F1; border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; font-size: 15px; line-height: 1.5; }
+.tplbox .btn { white-space: nowrap; flex: none; }
+.pick-stamp {
+  position: absolute; right: 66px; bottom: 5px; width: 42px; height: 42px; border-radius: 50%; z-index: 4;
+  border: 2.5px double #D62828; color: #D62828; background: rgba(255,255,255,.55);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+  font-family: "Jua"; font-size: 8px; transform: rotate(-14deg); pointer-events: none; mix-blend-mode: multiply;
+}
+.pick-stamp b { font-size: 11px; font-weight: 400; letter-spacing: 0; }
+.pick-stamp i { font-style: normal; font-size: 7px; }
+.pick-stamp.new { animation: stamp .45s cubic-bezier(.2,1.6,.5,1); }
+@keyframes stamp { 0% { transform: rotate(-14deg) scale(2.4); opacity: 0; } 60% { opacity: 1; } 100% { transform: rotate(-14deg) scale(1); } }
+.note.picked .who { max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note.picked { box-shadow: 0 10px 14px -6px rgba(40,20,5,.55), 0 0 0 4px rgba(214,40,40,.35); }
+.btn.pick { background: #D62828 !important; color: #fff; }
+.hint.ok { color: #1f7a6e; } .hint.warn { color: #B4462A; }
+#wallSel { max-width: 170px; text-overflow: ellipsis; }
+header .btn { font-size: 16px; padding: 8px 12px; flex: none; }
+header { gap: 10px; flex-wrap: nowrap; }
+header .stat { flex: none; white-space: nowrap; }
+@media (max-width: 1100px) { header { flex-wrap: wrap; } }
+#wallSel option, #sortSel option { color: #222; }
+@media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title" title="눌러서 단원 설정 바꾸기">질문 벽</h1>
+  <span class="stat">질문 <b id="sTotal">0</b></span>
+  <span class="stat">🔴 스티커 <b id="sDots">0</b></span>
+  <span class="stat">⭐ Pick <b id="sPick">0</b></span>
+  <span class="spacer"></span>
+  <select class="btn ghost" id="wallSel" title="다른 질문 벽으로 바꾸기"></select>
+  <select class="btn ghost" id="sortSel" title="정렬">
+    <option value="dots">궁금해요 많은 순</option>
+    <option value="pick">선생님 Pick 먼저</option>
+    <option value="new">최신 순</option>
+    <option value="old">오래된 순</option>
+  </select>
+  <button class="btn ghost" id="settingsBtn">⚙️ 단원 설정</button>
+  <button class="btn ghost" id="backupBtn" title="질문 벽을 파일로 저장해 두기">💾 백업</button>
+  <button class="btn ghost" id="restoreBtn" title="백업 파일 불러오기">📂 불러오기</button>
+  <input type="file" id="restoreFile" accept=".json" hidden>
+  <button class="btn primary" id="addBtn">✏️ 질문 붙이기</button>
+</header>
+
+<main>
+  <section class="zone open">
+    <div class="zone-head"><div class="banner">🤔 아직 궁금해요 <span class="count" id="cOpen">0</span></div></div>
+    <div class="notes" id="openNotes"></div>
+  </section>
+  <section class="zone done">
+    <div class="zone-head"><div class="banner">💡 해결했어요! <span class="count" id="cDone">0</span></div></div>
+    <div class="notes" id="doneNotes"></div>
+  </section>
+</main>
+
+<!-- 단원 설정 / 새 질문 벽 -->
+<div class="backdrop" id="setupModal">
+  <div class="sheet wide" id="setupSheet">
+    <button class="x" data-close id="setupX">×</button>
+    <h2 id="setupTitle">📌 새 질문 벽 만들기</h2>
+    <div class="two-col">
+      <div>
+        <label for="sSubject">과목</label>
+        <input type="text" id="sSubject" list="subjects" maxlength="12" placeholder="예) 과학">
+        <datalist id="subjects"><option>국어</option><option>수학</option><option>사회</option><option>과학</option><option>영어</option><option>도덕</option><option>실과</option><option>음악</option><option>미술</option><option>체육</option><option>창체</option><option>통합</option></datalist>
+      </div>
+      <div>
+        <label for="sUnit">단원명</label>
+        <input type="text" id="sUnit" maxlength="40" placeholder="예) 4. 기후 변화와 우리 생활">
+      </div>
+    </div>
+
+    <label>단원 계획 올리기 <span class="opt">(선택)</span></label>
+    <div class="tplbox">
+      <div><b>① 엑셀 양식을 받아</b> 노란 칸(과목, 단원명, 차시별 주제)을 채우고 <b>② 아래에 올리면</b> 바로 적용돼요.</div>
+      <button class="btn teal" id="tplBtn">📥 엑셀 양식 받기</button>
+    </div>
+    <div class="drop" id="drop">
+      <input type="file" id="planFile" accept=".txt,.md,.csv,.tsv,.xlsx,.xls,.docx,.hwpx" hidden>
+      <div class="drop-in">
+        <div class="drop-big">📄 파일을 여기에 끌어 놓거나 <button class="linkbtn" id="pickPlan">파일 고르기</button></div>
+        <div class="hint">채운 엑셀 양식을 올리면 가장 정확해요. 이미 가진 한글(.hwpx)·워드(.docx)·엑셀·텍스트 파일도 ‘○차시’를 찾아 읽어 볼게요.<br>한글(.hwp) 파일은 [다른 이름으로 저장 → .hwpx]로 바꾸거나, 아래 칸에 내용을 붙여 넣어 주세요.</div>
+      </div>
+    </div>
+    <details id="pasteBox">
+      <summary>단원 계획 내용을 직접 붙여 넣기</summary>
+      <textarea id="planPaste" rows="5" placeholder="단원 계획의 내용을 복사해서 붙여 넣은 뒤 [차시 찾기]를 눌러요."></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn" id="parsePaste">🔍 차시 찾기</button></div>
+    </details>
+
+    <label for="sLessons">‘언제 알게 되었나요?’ 선택지 <span class="opt">(한 줄에 하나씩, 직접 고칠 수 있어요)</span></label>
+    <textarea id="sLessons" rows="7" placeholder="1차시 · 단원 도입&#10;2차시 · ...&#10;3차시 · ..."></textarea>
+    <p class="hint" id="parseMsg">‘스스로 찾아봤어요’는 자동으로 들어가요.</p>
+
+    <div class="row">
+      <button class="btn danger" id="delWall" hidden>🗑 이 질문 벽 지우기</button>
+      <button class="btn" id="newWallBtn" hidden>＋ 새 질문 벽 만들기</button>
+      <button class="btn primary" id="saveSetup">📌 질문 벽 만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 질문 붙이기 -->
+<div class="backdrop" id="addModal">
+  <div class="sheet" id="addSheet">
+    <button class="x" data-close>×</button>
+    <h2>✏️ 포스트잇에 질문 쓰기</h2>
+    <label for="qText">질문</label>
+    <textarea id="qText" rows="3" maxlength="120" placeholder="학생이 쓴 질문을 적어요."></textarea>
+    <div class="starters">
+      <button data-s="왜 ">왜 ~할까?</button><button data-s="어떻게 ">어떻게 ~할까?</button>
+      <button data-s="만약 ">만약 ~라면?</button><button data-s="와(과) ">~와 ~는 어떤 관계일까?</button>
+    </div>
+    <label for="qName">이름 (안 써도 돼요)</label>
+    <input type="text" id="qName" maxlength="12" placeholder="예) 3모둠 수빈">
+    <label>포스트잇 색깔</label>
+    <div class="colors" id="colorPick"></div>
+    <div class="row">
+      <button class="btn" data-close>취소</button>
+      <button class="btn primary" id="saveQ">📌 벽에 붙이기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 질문 보기 / 답 쓰기 -->
+<div class="backdrop" id="viewModal">
+  <div class="sheet" id="viewSheet">
+    <button class="x" data-close>×</button>
+    <p class="bigq" id="vQ"></p>
+    <div class="meta" id="vMeta"></div>
+    <div id="vAnswerBox"></div>
+    <div class="row" id="vActions"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+/* ============================================================
+   우리 반 질문 벽 (모든 과목·단원용)
+   - 데이터는 이 기기의 브라우저에 저장돼요. [💾 백업]으로 파일을 남겨 두세요.
+   ============================================================ */
+const COLORS = { y: "#FFE98A", p: "#FFC4D0", g: "#C8EDB3", b: "#BFE3F5", o: "#FFD3A8", v: "#DCCBF7" };
+const PINS = ["#E63946", "#2A9D8F", "#457B9D", "#F4A261", "#6A4C93"];
+const DOT_COLORS = ["#E63946", "#F4A261", "#2A9D8F", "#457B9D", "#9B5DE5", "#FFB703"];
+const SELF = "스스로 찾아봤어요";
+const KEY = "qwall-v2";
+const $ = (s) => document.querySelector(s);
+const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function safeGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } }
+function safeSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { toast("저장 공간이 부족해요. 백업 후 오래된 질문 벽을 지워 주세요."); } }
+
+/* ---------- 저장 구조 ---------- */
+let db = safeGet(KEY, { walls: {}, current: null });
+let pickedColor = "y";
+const wall = () => db.walls[db.current];
+const qs = () => (wall() ? wall().questions : {});
+function save() { safeSet(KEY, db); }
+const wallName = (w) => (w.subject ? `[${w.subject}] ` : "") + (w.unit || "질문 벽");
+
+/* ============================================================
+   단원 계획에서 차시 찾기
+   ============================================================ */
+function cleanTitle(t) {
+  return t.replace(/^[\s.:：)\]>·\-–—|,/]+/, "").replace(/[\s|,]+$/, "").replace(/\s{2,}/g, " ").slice(0, 38).trim();
+}
+function looksLikeTopic(t) { return /[가-힣A-Za-z]{2,}/.test(t) && !/^(차시|주제|학습\s*내용|핵심|비고|쪽|교과서)/.test(t.trim()); }
+
+function parseLessons(text) {
+  const lines = text.replace(/\r/g, "").split("\n").map((l) => l.replace(/ /g, " ").trim()).filter(Boolean);
+  const found = new Map(); // key "1" or "1~2" -> title
+  const add = (a, b, title) => {
+    a = +a; b = b ? +b : null;
+    if (!(a >= 1 && a <= 40) || (b && (b <= a || b > 40))) return;
+    const key = b ? `${a}~${b}` : `${a}`;
+    if (!found.has(key) || (!found.get(key) && title)) found.set(key, title || "");
+  };
+  // 1) "3차시. 주제", "1~2차시 | 주제", "[3차시] 주제"
+  const reA = /(?:^|[^\d])(\d{1,2})\s*(?:[-~∼]\s*(\d{1,2}))?\s*차시\s*[\].):：·\-–—|]*\s*(.*)$/;
+  lines.forEach((l, i) => {
+    const m = l.match(reA);
+    if (!m) return;
+    const before = l.slice(0, m.index + m[0].indexOf(m[1]));
+    if (/(총|전체|모두|약)\s*$/.test(before)) return; // "총 6차시" 같은 표현은 건너뛰어요
+    let title = cleanTitle(m[3] || "");
+    if (!looksLikeTopic(title)) {
+      const nxt = lines[i + 1] || "";
+      title = !reA.test(nxt) && looksLikeTopic(nxt) ? cleanTitle(nxt) : "";
+    }
+    add(m[1], m[2], title);
+  });
+  // 2) 표: "1<TAB>주제<TAB>..." 또는 "1,주제,..." 또는 "1 | 주제"
+  if (found.size < 2) {
+    lines.forEach((l) => {
+      const cells = l.split(/\t|\s*\|\s*|,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map((c) => c.replace(/^"|"$/g, "").trim()).filter(Boolean);
+      if (cells.length >= 2 && /^\d{1,2}(\s*[-~]\s*\d{1,2})?$/.test(cells[0]) && looksLikeTopic(cells[1])) {
+        const [a, b] = cells[0].split(/\s*[-~]\s*/);
+        add(a, b, cleanTitle(cells[1]));
+      }
+    });
+  }
+  // 3) 한 줄에 숫자만 있고 다음 줄이 주제인 경우 (hwpx·docx 표)
+  if (found.size < 2) {
+    let expect = 1;
+    lines.forEach((l, i) => {
+      if (l === String(expect) && looksLikeTopic(lines[i + 1] || "")) { add(expect, null, cleanTitle(lines[i + 1])); expect++; }
+    });
+  }
+  const keys = [...found.keys()].sort((x, y) => parseInt(x) - parseInt(y));
+  return keys.map((k) => `${k}차시${found.get(k) ? " · " + found.get(k) : ""}`);
+}
+
+/* ---------- 엑셀 양식 ---------- */
+const TEMPLATE_B64 = "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";
+$("#tplBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  const bin = atob(TEMPLATE_B64), arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  const blob = new Blob([arr], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "질문벽_단원계획_양식.xlsx";
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("📥 엑셀 양식을 받았어요. 노란 칸을 채워 올려 주세요!");
+});
+
+// 질문 벽 엑셀 양식이면 표 그대로 읽어요 (과목·단원명·차시·주제)
+function readTemplate(wb) {
+  for (const name of wb.SheetNames) {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: "", raw: false });
+    const hi = rows.findIndex((r) => String(r[0]).trim() === "차시" && String(r[1]).trim().startsWith("주제"));
+    if (hi < 0) continue;
+    const find = (k) => { const r = rows.find((x) => String(x[0]).trim() === k); return r ? String(r[1] || "").trim() : ""; };
+    const lessons = [];
+    for (const r of rows.slice(hi + 1)) {
+      const n = String(r[0]).trim().replace(/\s*차시$/, "").replace(/\s*[-~∼]\s*/, "~");
+      const topic = String(r[1] || "").trim();
+      if (!/^\d{1,2}(~\d{1,2})?$/.test(n) || !topic) continue;
+      lessons.push(`${n}차시 · ${topic}`);
+    }
+    return { subject: find("과목"), unit: find("단원명"), lessons };
+  }
+  return null;
+}
+
+async function fileToText(file) {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".hwp")) throw new Error("hwp");
+  if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
+    if (!window.XLSX) throw new Error("lib");
+    const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    return wb.SheetNames.map((n) => XLSX.utils.sheet_to_csv(wb.Sheets[n], { FS: "\t" })).join("\n");
+  }
+  if (name.endsWith(".docx")) {
+    if (!window.mammoth) throw new Error("lib");
+    const r = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return r.value;
+  }
+  if (name.endsWith(".hwpx")) {
+    if (!window.JSZip) throw new Error("lib");
+    const zip = await JSZip.loadAsync(await file.arrayBuffer());
+    const secs = Object.keys(zip.files).filter((f) => /Contents\/section\d+\.xml$/i.test(f)).sort();
+    let out = [];
+    for (const f of secs) {
+      const xml = await zip.file(f).async("string");
+      const doc = new DOMParser().parseFromString(xml, "application/xml");
+      const paras = doc.getElementsByTagNameNS("*", "p");
+      for (const p of paras) {
+        if (p.getElementsByTagNameNS("*", "p").length) continue; // 표 안 문단은 따로 읽어요
+        const t = [...p.getElementsByTagNameNS("*", "t")].map((x) => x.textContent).join("");
+        if (t.trim()) out.push(t);
+      }
+    }
+    return out.join("\n");
+  }
+  return await file.text();
+}
+
+function applyParsed(list, source) {
+  const msg = $("#parseMsg");
+  if (!list.length) {
+    msg.innerHTML = `⚠️ ${source}에서 ‘○차시’를 찾지 못했어요. 선택지를 직접 적어 주세요.`;
+    msg.className = "hint warn";
+    return;
+  }
+  $("#sLessons").value = list.join("\n");
+  msg.innerHTML = `✅ ${source}에서 <b>${list.length}개 차시</b>를 찾았어요. 틀린 곳이 있으면 고쳐 주세요. ‘${SELF}’는 자동으로 들어가요.`;
+  msg.className = "hint ok";
+}
+
+async function handlePlanFile(file) {
+  if (!file) return;
+  $("#parseMsg").textContent = "⏳ 단원 계획을 읽는 중…";
+  try {
+    const lower = file.name.toLowerCase();
+    if ((lower.endsWith(".xlsx") || lower.endsWith(".xls")) && window.XLSX) {
+      const tpl = readTemplate(XLSX.read(await file.arrayBuffer(), { type: "array" }));
+      if (tpl) {
+        if (tpl.subject) $("#sSubject").value = tpl.subject;
+        if (tpl.unit) $("#sUnit").value = tpl.unit;
+        if (!tpl.lessons.length) {
+          $("#parseMsg").className = "hint warn";
+          $("#parseMsg").textContent = "⚠️ 엑셀 양식에 주제가 적힌 차시가 없어요. 노란 칸의 ‘주제’를 채워 다시 올려 주세요.";
+          return;
+        }
+        applyParsed(tpl.lessons, "엑셀 양식");
+        return;
+      }
+    }
+    const text = await fileToText(file);
+    applyParsed(parseLessons(text), `‘${file.name}’`);
+    if (!$("#sUnit").value.trim()) {
+      const m = text.match(/(\d{1,2}\s*\.\s*[가-힣A-Za-z ,·]{3,30})\s*(?:\n|$)/);
+      if (m) $("#sUnit").value = m[1].trim();
+    }
+  } catch (e) {
+    const m = $("#parseMsg");
+    m.className = "hint warn";
+    m.innerHTML = e.message === "hwp"
+      ? "⚠️ 한글(.hwp) 파일은 바로 읽을 수 없어요. 한글에서 [다른 이름으로 저장 → HWPX]로 저장하거나, 내용을 복사해 아래 ‘직접 붙여 넣기’에 넣어 주세요."
+      : e.message === "lib"
+      ? "⚠️ 이 파일을 읽는 도구를 불러오지 못했어요(인터넷 연결 확인). 내용을 복사해 ‘직접 붙여 넣기’에 넣어 주세요."
+      : "⚠️ 파일을 읽지 못했어요. 내용을 복사해 ‘직접 붙여 넣기’에 넣어 주세요.";
+  }
+}
+
+/* ============================================================
+   단원 설정 화면
+   ============================================================ */
+let setupMode = "new";
+function openSetup(mode) {
+  setupMode = mode;
+  const w = mode === "edit" ? wall() : null;
+  $("#setupTitle").textContent = w ? "⚙️ 단원 설정" : "📌 새 질문 벽 만들기";
+  $("#saveSetup").textContent = w ? "💾 저장하기" : "📌 질문 벽 만들기";
+  $("#sSubject").value = w ? w.subject : "";
+  $("#sUnit").value = w ? w.unit : "";
+  $("#sLessons").value = w ? w.lessons.join("\n") : "";
+  $("#planPaste").value = "";
+  $("#pasteBox").open = false;
+  $("#parseMsg").className = "hint";
+  $("#parseMsg").textContent = `‘${SELF}’는 자동으로 들어가요.`;
+  $("#delWall").hidden = !w;
+  $("#newWallBtn").hidden = !w;
+  $("#setupX").hidden = !Object.keys(db.walls).length;
+  openModal("#setupModal");
+  setTimeout(() => (w ? null : $("#sSubject").focus()), 60);
+}
+$("#pickPlan").addEventListener("click", (e) => { e.preventDefault(); $("#planFile").click(); });
+$("#planFile").addEventListener("change", (e) => { handlePlanFile(e.target.files[0]); e.target.value = ""; });
+const drop = $("#drop");
+["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (e) => handlePlanFile(e.dataTransfer.files[0]));
+$("#parsePaste").addEventListener("click", () => applyParsed(parseLessons($("#planPaste").value), "붙여 넣은 내용"));
+
+$("#saveSetup").addEventListener("click", () => {
+  const subject = $("#sSubject").value.trim();
+  const unit = $("#sUnit").value.trim();
+  if (!unit) { toast("단원명을 써 주세요!"); $("#sUnit").focus(); return; }
+  const lessons = $("#sLessons").value.split("\n").map((l) => l.trim()).filter((l) => l && l !== SELF);
+  if (setupMode === "edit") {
+    Object.assign(wall(), { subject, unit, lessons });
+    toast("단원 설정을 저장했어요");
+  } else {
+    const id = "w" + Date.now();
+    db.walls[id] = { id, subject, unit, lessons, questions: {}, createdAt: Date.now() };
+    db.current = id;
+    toast("📌 새 질문 벽을 만들었어요!");
+  }
+  save(); closeModals(); renderAll();
+});
+$("#delWall").addEventListener("click", () => {
+  if (!confirm(`‘${wallName(wall())}’ 질문 벽을 지울까요?\n지우기 전에 [💾 백업]을 해 두면 다시 불러올 수 있어요.`)) return;
+  delete db.walls[db.current];
+  db.current = Object.keys(db.walls)[0] || null;
+  save(); closeModals(); renderAll();
+  if (!db.current) openSetup("new");
+});
+$("#newWallBtn").addEventListener("click", () => { closeModals(); openSetup("new"); });
+$("#settingsBtn").addEventListener("click", () => openSetup("edit"));
+$("#title").addEventListener("click", () => openSetup("edit"));
+$("#wallSel").addEventListener("change", (e) => {
+  if (e.target.value === "__new") { e.target.value = db.current; openSetup("new"); return; }
+  db.current = e.target.value; save(); renderAll();
+});
+
+/* ============================================================
+   포스트잇 그리기
+   ============================================================ */
+function dotAt(i) {
+  const perRow = 7, row = Math.floor(i / perRow) % 3, col = i % perRow;
+  const jx = ((i * 37) % 7) - 3, jy = ((i * 53) % 7) - 3;
+  return { c: DOT_COLORS[i % DOT_COLORS.length], x: 12 + col * 20 + jx, y: 40 + row * 20 + jy };
+}
+const dotCount = (q) => (q.dots ? Object.keys(q.dots).length : 0);
+let justPicked = null;
+
+function noteHTML(q) {
+  const lift = q.pick ? 12 : 0; // Pick 도장이 있으면 스티커를 조금 위로
+  const dotEls = Object.values(q.dots || {}).map((d) => `<span class="dot" style="left:${d.x}px;bottom:${d.y + lift}px;background:${d.c}"></span>`).join("");
+  const ans = q.answer ? `<div class="answer"><span class="solved-stamp">해결!</span><span class="tag">답</span>${esc(q.answer.text)}${q.answer.lesson ? `<span class="by">📚 ${esc(q.answer.lesson)}${q.answer.by ? " · " + esc(q.answer.by) : ""}</span>` : ""}</div>` : "";
+  return `<article class="note c-${q.color || "y"}${q.pick ? " picked" : ""}" data-id="${q.id}" style="--rot:${q.rot || 0}deg;--pin:${PINS[(q.pin || 0) % PINS.length]};--pb:${46 + (q.pick ? 12 : 0) + Math.min(3, Math.ceil(dotCount(q) / 7)) * 20}px" tabindex="0">
+    <div class="dots">${dotEls}</div>
+    ${q.pick ? `<span class="pick-stamp${justPicked === q.id ? " new" : ""}"><i>선생님</i><b>PICK!</b></span>` : ""}
+    <div class="q">${esc(q.text)}</div>
+    ${ans}
+    ${q.author ? `<span class="who">✍️ ${esc(q.author)}</span>` : ""}
+    <button class="metoo" data-metoo="${q.id}" title="누를 때마다 스티커가 1개씩 붙어요"><span class="d"></span>${dotCount(q)}</button>
+  </article>`;
+}
+
+function renderAll() {
+  const ids = Object.keys(db.walls);
+  $("#wallSel").innerHTML = ids.map((id) => `<option value="${id}" ${id === db.current ? "selected" : ""}>${esc(wallName(db.walls[id]))}</option>`).join("") + `<option value="__new">＋ 새 질문 벽…</option>`;
+  const w = wall();
+  $("#title").textContent = w ? `${wallName(w)} 질문 벽` : "질문 벽";
+  document.title = w ? `${wallName(w)} 질문 벽` : "질문 벽";
+  render();
+}
+
+function render() {
+  const list = Object.values(qs());
+  const cmp = {
+    dots: (a, b) => dotCount(b) - dotCount(a) || b.createdAt - a.createdAt,
+    pick: (a, b) => (b.pick ? 1 : 0) - (a.pick ? 1 : 0) || dotCount(b) - dotCount(a) || b.createdAt - a.createdAt,
+    new: (a, b) => b.createdAt - a.createdAt,
+    old: (a, b) => a.createdAt - b.createdAt,
+  }[$("#sortSel").value];
+  const open = list.filter((q) => !q.answer).sort(cmp);
+  const done = list.filter((q) => q.answer).sort((a, b) => (b.answer.at || 0) - (a.answer.at || 0));
+  $("#openNotes").innerHTML = open.length ? open.map(noteHTML).join("") : `<p class="empty">학생들의 질문을<br>[✏️ 질문 붙이기]로 붙여 보세요!</p>`;
+  $("#doneNotes").innerHTML = done.length ? done.map(noteHTML).join("") : `<p class="empty">질문을 눌러 답을 적으면<br>이곳으로 옮겨져요 💡</p>`;
+  $("#cOpen").textContent = open.length;
+  $("#cDone").textContent = done.length;
+  $("#sTotal").textContent = list.length;
+  $("#sDots").textContent = list.reduce((s, q) => s + dotCount(q), 0);
+  $("#sPick").textContent = list.filter((q) => q.pick).length;
+  justPicked = null;
+}
+
+/* ---------- 모달 ---------- */
+function openModal(id) { $(id).classList.add("show"); }
+function closeModals() {
+  if (!db.current) return; // 질문 벽이 하나도 없으면 설정 화면을 닫지 않아요
+  document.querySelectorAll(".backdrop").forEach((b) => b.classList.remove("show"));
+}
+document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", closeModals));
+document.querySelectorAll(".backdrop").forEach((b) => b.addEventListener("mousedown", (e) => { if (e.target === b) closeModals(); }));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModals(); });
+
+/* ---------- 질문 붙이기 ---------- */
+$("#colorPick").innerHTML = Object.entries(COLORS).map(([k, c]) => `<button data-c="${k}" style="background:${c}" aria-label="${k}"></button>`).join("");
+function pickColor(k) {
+  pickedColor = k;
+  document.querySelectorAll("#colorPick button").forEach((b) => b.classList.toggle("sel", b.dataset.c === k));
+  $("#addSheet").style.background = COLORS[k];
+}
+$("#colorPick").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) pickColor(b.dataset.c); });
+$("#addBtn").addEventListener("click", () => {
+  if (!wall()) return openSetup("new");
+  $("#qText").value = ""; $("#qName").value = "";
+  pickColor(Object.keys(COLORS)[Math.floor(Math.random() * 6)]);
+  openModal("#addModal");
+  setTimeout(() => $("#qText").focus(), 50);
+});
+document.querySelectorAll(".starters button").forEach((b) => b.addEventListener("click", () => {
+  const t = $("#qText"); t.value = (t.value ? t.value + " " : "") + b.dataset.s; t.focus();
+}));
+$("#saveQ").addEventListener("click", () => {
+  const text = $("#qText").value.trim();
+  if (!text) { toast("질문을 먼저 써 주세요!"); $("#qText").focus(); return; }
+  const id = "q" + Date.now() + Math.random().toString(36).slice(2, 5);
+  qs()[id] = { id, text, author: $("#qName").value.trim(), color: pickedColor, rot: Math.round((Math.random() * 8 - 4) * 10) / 10, pin: Math.floor(Math.random() * PINS.length), createdAt: Date.now(), dots: {} };
+  save(); render(); closeModals();
+  toast("📌 질문을 벽에 붙였어요!");
+});
+
+/* ---------- 스티커 ---------- */
+function addDot(id) { const q = qs()[id]; q.dots = q.dots || {}; q.dots["d" + Date.now() + "_" + Math.random().toString(36).slice(2, 9)] = dotAt(dotCount(q)); save(); render(); toast("🔴 나도 궁금해요! 스티커 +1"); }
+function removeDot(id) { const q = qs()[id]; const ks = Object.keys(q.dots || {}); if (ks.length) { delete q.dots[ks[ks.length - 1]]; save(); render(); toast("스티커를 1개 뗐어요"); } }
+
+/* ---------- 질문 보기 · 답 쓰기 ---------- */
+function openView(id) {
+  const q = qs()[id]; if (!q) return;
+  $("#viewSheet").style.background = COLORS[q.color || "y"];
+  $("#vQ").textContent = q.text;
+  $("#vMeta").innerHTML = `${q.pick ? "⭐ 선생님 Pick · " : ""}${q.author ? "✍️ " + esc(q.author) + " · " : ""}🔴 나도 궁금해요 ${dotCount(q)}개`;
+  const opts = [...(wall().lessons || []), SELF];
+  const cur = q.answer ? q.answer.lesson : "";
+  if (cur && !opts.includes(cur)) opts.unshift(cur);
+  $("#vAnswerBox").innerHTML = `
+    <label for="aText">💡 답 쓰기</label>
+    <textarea id="aText" rows="4" maxlength="200" placeholder="배운 내용이나 찾아본 내용으로 답을 써요.">${q.answer ? esc(q.answer.text) : ""}</textarea>
+    <label for="aLesson">언제 알게 되었나요?</label>
+    <select id="aLesson">${opts.map((l) => `<option ${l === cur ? "selected" : ""}>${esc(l)}</option>`).join("")}</select>
+    <label for="aBy">답을 쓴 사람 (안 써도 돼요)</label>
+    <input type="text" id="aBy" maxlength="12" value="${q.answer ? esc(q.answer.by) : ""}">
+    <p class="hint">답을 저장하면 ‘해결했어요!’ 구역으로 옮겨져요.</p>`;
+  const act = $("#vActions");
+  act.innerHTML = `
+    <button class="btn danger" id="delQ">🗑 질문 지우기</button>
+    ${q.answer ? '<button class="btn" id="unsolve">↩️ 다시 궁금해요로</button>' : ""}
+    <button class="btn ${q.pick ? "" : "pick"}" id="pickBtn">${q.pick ? "Pick 도장 지우기" : "⭐ 선생님 Pick!"}</button>
+    <button class="btn" id="undotBtn">스티커 1개 떼기</button>
+    <button class="btn" id="dotBtn">🔴 스티커 +1</button>
+    <button class="btn teal" id="saveA">💡 답 저장하기</button>`;
+  act.querySelector("#dotBtn").onclick = () => { addDot(id); openView(id); };
+  act.querySelector("#pickBtn").onclick = () => {
+    q.pick = !q.pick;
+    if (q.pick) { q.pickedAt = Date.now(); justPicked = id; } else { delete q.pickedAt; }
+    save(); render(); closeModals();
+    toast(q.pick ? "⭐ 선생님 Pick! 도장을 쾅!" : "Pick 도장을 지웠어요");
+  };
+  act.querySelector("#undotBtn").onclick = () => { removeDot(id); openView(id); };
+  act.querySelector("#delQ").onclick = () => { if (confirm("이 질문을 지울까요?")) { delete qs()[id]; save(); render(); closeModals(); toast("질문을 지웠어요"); } };
+  if (q.answer) act.querySelector("#unsolve").onclick = () => { delete q.answer; save(); render(); closeModals(); toast("‘아직 궁금해요’로 옮겼어요"); };
+  act.querySelector("#saveA").onclick = () => {
+    const text = $("#aText").value.trim();
+    if (!text) { toast("답을 먼저 써 주세요!"); $("#aText").focus(); return; }
+    const answer = { text, lesson: $("#aLesson").value, by: $("#aBy").value.trim(), at: Date.now() };
+    const wasOpen = !q.answer;
+    closeModals();
+    const el = document.querySelector(`.note[data-id="${id}"]`);
+    const commit = () => { q.answer = answer; save(); render(); };
+    if (wasOpen && el) { el.classList.add("flying"); setTimeout(() => { commit(); toast("💡 해결! ‘해결했어요’ 구역으로 옮겼어요"); }, 520); }
+    else { commit(); toast("답을 고쳤어요"); }
+  };
+  openModal("#viewModal");
+}
+
+document.querySelector("main").addEventListener("click", (e) => {
+  const m = e.target.closest("[data-metoo]");
+  if (m) { e.stopPropagation(); addDot(m.dataset.metoo); return; }
+  const n = e.target.closest(".note");
+  if (n) openView(n.dataset.id);
+});
+document.querySelector("main").addEventListener("keydown", (e) => { if (e.key === "Enter") { const n = e.target.closest(".note"); if (n) openView(n.dataset.id); } });
+$("#sortSel").addEventListener("change", render);
+
+/* ---------- 백업 / 불러오기 ---------- */
+$("#backupBtn").addEventListener("click", () => {
+  if (!wall()) return;
+  const blob = new Blob([JSON.stringify({ type: "qwall-v2", wall: wall(), savedAt: new Date().toISOString() }, null, 2)], { type: "application/json" });
+  const a = document.createElement("a"), d = new Date();
+  a.href = URL.createObjectURL(blob);
+  a.download = `질문벽_${wallName(wall()).replace(/[\\/:*?"<>|\[\]]/g, "").trim()}_${d.getMonth() + 1}월${d.getDate()}일.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("💾 백업 파일을 저장했어요");
+});
+$("#restoreBtn").addEventListener("click", () => $("#restoreFile").click());
+$("#restoreFile").addEventListener("change", (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      let w = data.wall;
+      if (!w && data.questions) w = { subject: "", unit: data.title || "불러온 질문 벽", lessons: [], questions: data.questions }; // 이전 버전 백업
+      if (!w || !w.questions) throw new Error();
+      const same = w.id && db.walls[w.id];
+      if (same && !confirm(`‘${wallName(w)}’ 질문 벽이 이미 있어요. 백업 내용으로 바꿀까요?`)) return;
+      w.id = w.id || "w" + Date.now();
+      db.walls[w.id] = w; db.current = w.id;
+      save(); renderAll(); toast("📂 백업을 불러왔어요");
+    } catch { toast("백업 파일을 읽을 수 없어요"); }
+    e.target.value = "";
+  };
+  r.readAsText(f);
+});
+
+/* ---------- 토스트 ---------- */
+let tt;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 2200); }
+
+/* ---------- 시작 ---------- */
+renderAll();
+if (!db.current) openSetup("new");
+</script>
+</body>
+</html>
