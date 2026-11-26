@@ -25,7 +25,7 @@ header {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding: 12px 22px; background: #2B1E15; color: #FFF6E6;
 }
-header h1 { font-family: "Jua"; font-size: 28px; margin: 0; font-weight: 400; letter-spacing: 1px; cursor: pointer; }
+header h1 { font-family: "Jua"; font-size: 25px; margin: 0; font-weight: 400; letter-spacing: 1px; cursor: pointer; flex: 0 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 header h1:hover { text-decoration: underline dotted rgba(255,255,255,.4); }
 .stat { font-family: "Jua"; font-size: 16px; padding: 4px 12px; border-radius: 20px; background: rgba(255,255,255,.1); }
 .stat b { font-size: 19px; }
@@ -112,7 +112,7 @@ main {
 .answer .tag { font-family: "Jua"; font-size: 13px; color: #fff; background: var(--done); border-radius: 10px; padding: 1px 8px; margin-right: 4px; }
 .answer .by { display: block; font-size: 13px; color: var(--soft); margin-top: 4px; }
 .solved-stamp {
-  position: absolute; top: 10px; right: -6px; font-family: "Jua"; font-size: 15px; color: var(--done);
+  position: absolute; top: -16px; right: -4px; font-family: "Jua"; font-size: 15px; color: var(--done);
   border: 3px solid var(--done); border-radius: 8px; padding: 0 6px; transform: rotate(12deg); background: rgba(255,255,255,.7);
 }
 
@@ -177,8 +177,25 @@ details textarea { margin-top: 8px; font-size: 16px !important; font-family: "Go
 #sLessons { font-size: 18px; line-height: 1.6; }
 .tplbox { display: flex; align-items: center; gap: 12px; justify-content: space-between; background: #E3F4F1; border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; font-size: 15px; line-height: 1.5; }
 .tplbox .btn { white-space: nowrap; flex: none; }
+.pick-stamp {
+  position: absolute; right: 66px; bottom: 5px; width: 42px; height: 42px; border-radius: 50%; z-index: 4;
+  border: 2.5px double #D62828; color: #D62828; background: rgba(255,255,255,.55);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+  font-family: "Jua"; font-size: 8px; transform: rotate(-14deg); pointer-events: none; mix-blend-mode: multiply;
+}
+.pick-stamp b { font-size: 11px; font-weight: 400; letter-spacing: 0; }
+.pick-stamp i { font-style: normal; font-size: 7px; }
+.pick-stamp.new { animation: stamp .45s cubic-bezier(.2,1.6,.5,1); }
+@keyframes stamp { 0% { transform: rotate(-14deg) scale(2.4); opacity: 0; } 60% { opacity: 1; } 100% { transform: rotate(-14deg) scale(1); } }
+.note.picked .who { max-width: 84px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note.picked { box-shadow: 0 10px 14px -6px rgba(40,20,5,.55), 0 0 0 4px rgba(214,40,40,.35); }
+.btn.pick { background: #D62828 !important; color: #fff; }
 .hint.ok { color: #1f7a6e; } .hint.warn { color: #B4462A; }
-#wallSel { max-width: 240px; text-overflow: ellipsis; }
+#wallSel { max-width: 170px; text-overflow: ellipsis; }
+header .btn { font-size: 16px; padding: 8px 12px; flex: none; }
+header { gap: 10px; flex-wrap: nowrap; }
+header .stat { flex: none; white-space: nowrap; }
+@media (max-width: 1100px) { header { flex-wrap: wrap; } }
 #wallSel option, #sortSel option { color: #222; }
 @media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
 </style>
@@ -188,10 +205,12 @@ details textarea { margin-top: 8px; font-size: 16px !important; font-family: "Go
   <h1 id="title" title="눌러서 단원 설정 바꾸기">질문 벽</h1>
   <span class="stat">질문 <b id="sTotal">0</b></span>
   <span class="stat">🔴 스티커 <b id="sDots">0</b></span>
+  <span class="stat">⭐ Pick <b id="sPick">0</b></span>
   <span class="spacer"></span>
   <select class="btn ghost" id="wallSel" title="다른 질문 벽으로 바꾸기"></select>
   <select class="btn ghost" id="sortSel" title="정렬">
     <option value="dots">궁금해요 많은 순</option>
+    <option value="pick">선생님 Pick 먼저</option>
     <option value="new">최신 순</option>
     <option value="old">오래된 순</option>
   </select>
@@ -556,13 +575,15 @@ function dotAt(i) {
   return { c: DOT_COLORS[i % DOT_COLORS.length], x: 12 + col * 20 + jx, y: 40 + row * 20 + jy };
 }
 const dotCount = (q) => (q.dots ? Object.keys(q.dots).length : 0);
+let justPicked = null;
 
 function noteHTML(q) {
-  const dotEls = Object.values(q.dots || {}).map((d) => `<span class="dot" style="left:${d.x}px;bottom:${d.y}px;background:${d.c}"></span>`).join("");
-  const ans = q.answer ? `<div class="answer"><span class="tag">답</span>${esc(q.answer.text)}${q.answer.lesson ? `<span class="by">📚 ${esc(q.answer.lesson)}${q.answer.by ? " · " + esc(q.answer.by) : ""}</span>` : ""}</div>` : "";
-  return `<article class="note c-${q.color || "y"}" data-id="${q.id}" style="--rot:${q.rot || 0}deg;--pin:${PINS[(q.pin || 0) % PINS.length]};--pb:${46 + Math.min(3, Math.ceil(dotCount(q) / 7)) * 20}px" tabindex="0">
-    ${q.answer ? '<span class="solved-stamp">해결!</span>' : ""}
+  const lift = q.pick ? 12 : 0; // Pick 도장이 있으면 스티커를 조금 위로
+  const dotEls = Object.values(q.dots || {}).map((d) => `<span class="dot" style="left:${d.x}px;bottom:${d.y + lift}px;background:${d.c}"></span>`).join("");
+  const ans = q.answer ? `<div class="answer"><span class="solved-stamp">해결!</span><span class="tag">답</span>${esc(q.answer.text)}${q.answer.lesson ? `<span class="by">📚 ${esc(q.answer.lesson)}${q.answer.by ? " · " + esc(q.answer.by) : ""}</span>` : ""}</div>` : "";
+  return `<article class="note c-${q.color || "y"}${q.pick ? " picked" : ""}" data-id="${q.id}" style="--rot:${q.rot || 0}deg;--pin:${PINS[(q.pin || 0) % PINS.length]};--pb:${46 + (q.pick ? 12 : 0) + Math.min(3, Math.ceil(dotCount(q) / 7)) * 20}px" tabindex="0">
     <div class="dots">${dotEls}</div>
+    ${q.pick ? `<span class="pick-stamp${justPicked === q.id ? " new" : ""}"><i>선생님</i><b>PICK!</b></span>` : ""}
     <div class="q">${esc(q.text)}</div>
     ${ans}
     ${q.author ? `<span class="who">✍️ ${esc(q.author)}</span>` : ""}
@@ -583,6 +604,7 @@ function render() {
   const list = Object.values(qs());
   const cmp = {
     dots: (a, b) => dotCount(b) - dotCount(a) || b.createdAt - a.createdAt,
+    pick: (a, b) => (b.pick ? 1 : 0) - (a.pick ? 1 : 0) || dotCount(b) - dotCount(a) || b.createdAt - a.createdAt,
     new: (a, b) => b.createdAt - a.createdAt,
     old: (a, b) => a.createdAt - b.createdAt,
   }[$("#sortSel").value];
@@ -594,6 +616,8 @@ function render() {
   $("#cDone").textContent = done.length;
   $("#sTotal").textContent = list.length;
   $("#sDots").textContent = list.reduce((s, q) => s + dotCount(q), 0);
+  $("#sPick").textContent = list.filter((q) => q.pick).length;
+  justPicked = null;
 }
 
 /* ---------- 모달 ---------- */
@@ -634,7 +658,7 @@ $("#saveQ").addEventListener("click", () => {
 });
 
 /* ---------- 스티커 ---------- */
-function addDot(id) { const q = qs()[id]; q.dots = q.dots || {}; q.dots["d" + Date.now() + Math.random().toString(36).slice(2, 4)] = dotAt(dotCount(q)); save(); render(); toast("🔴 나도 궁금해요! 스티커 +1"); }
+function addDot(id) { const q = qs()[id]; q.dots = q.dots || {}; q.dots["d" + Date.now() + "_" + Math.random().toString(36).slice(2, 9)] = dotAt(dotCount(q)); save(); render(); toast("🔴 나도 궁금해요! 스티커 +1"); }
 function removeDot(id) { const q = qs()[id]; const ks = Object.keys(q.dots || {}); if (ks.length) { delete q.dots[ks[ks.length - 1]]; save(); render(); toast("스티커를 1개 뗐어요"); } }
 
 /* ---------- 질문 보기 · 답 쓰기 ---------- */
@@ -642,7 +666,7 @@ function openView(id) {
   const q = qs()[id]; if (!q) return;
   $("#viewSheet").style.background = COLORS[q.color || "y"];
   $("#vQ").textContent = q.text;
-  $("#vMeta").innerHTML = `${q.author ? "✍️ " + esc(q.author) + " · " : ""}🔴 나도 궁금해요 ${dotCount(q)}개`;
+  $("#vMeta").innerHTML = `${q.pick ? "⭐ 선생님 Pick · " : ""}${q.author ? "✍️ " + esc(q.author) + " · " : ""}🔴 나도 궁금해요 ${dotCount(q)}개`;
   const opts = [...(wall().lessons || []), SELF];
   const cur = q.answer ? q.answer.lesson : "";
   if (cur && !opts.includes(cur)) opts.unshift(cur);
@@ -658,10 +682,17 @@ function openView(id) {
   act.innerHTML = `
     <button class="btn danger" id="delQ">🗑 질문 지우기</button>
     ${q.answer ? '<button class="btn" id="unsolve">↩️ 다시 궁금해요로</button>' : ""}
+    <button class="btn ${q.pick ? "" : "pick"}" id="pickBtn">${q.pick ? "Pick 도장 지우기" : "⭐ 선생님 Pick!"}</button>
     <button class="btn" id="undotBtn">스티커 1개 떼기</button>
     <button class="btn" id="dotBtn">🔴 스티커 +1</button>
     <button class="btn teal" id="saveA">💡 답 저장하기</button>`;
   act.querySelector("#dotBtn").onclick = () => { addDot(id); openView(id); };
+  act.querySelector("#pickBtn").onclick = () => {
+    q.pick = !q.pick;
+    if (q.pick) { q.pickedAt = Date.now(); justPicked = id; } else { delete q.pickedAt; }
+    save(); render(); closeModals();
+    toast(q.pick ? "⭐ 선생님 Pick! 도장을 쾅!" : "Pick 도장을 지웠어요");
+  };
   act.querySelector("#undotBtn").onclick = () => { removeDot(id); openView(id); };
   act.querySelector("#delQ").onclick = () => { if (confirm("이 질문을 지울까요?")) { delete qs()[id]; save(); render(); closeModals(); toast("질문을 지웠어요"); } };
   if (q.answer) act.querySelector("#unsolve").onclick = () => { delete q.answer; save(); render(); closeModals(); toast("‘아직 궁금해요’로 옮겼어요"); };
